@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hello World!</title>
+    <style>
+        html {
+            height: 100%;
+            background-color: #eee;
+            padding: 0;
+            margin: 0;
+        }
+
+        body {
+            height: 100%;
+            overflow: hidden;
+            padding: 0;
+            margin: 0;
+        }
+
+        #handle {
+            -webkit-user-select: none;
+            -webkit-app-region: drag;
+            background-color: #ccc;
+            padding: 5px 10px;
+        }
+
+        #container {
+            padding: 10px;
+        }
+
+        .view {
+            width: 100%;
+            height: 80%;
+            display: none;
+        }
+
+            .view .active {
+                display: inline-block;
+            }
+    </style>
+</head>
+<body>
+    <div id="handle">Title</div>
+    <h1>Hello World!</h1>
+    We are using io.js
+    <script>document.write(process.version)</script>
+    and Electron
+    <script>document.write(process.versions['electron'])</script>.
+    <div id="container">
+        <div id="urlbar">
+            <ul id="tabbar">
+                <li class="tab active">http://bing.com/</li>
+            </ul>
+            <input id="urlinput" /><button id="visit">Visit</button><button id="newtab">New Tab</button>
+        </div>
+    </div>
+    <div id="views">
+        <webview id="view" class="view active" src="http://slideshare.net/" style="display: inline-block; width: 100%; height: 90%;" plugins preload="./preload.js" nodeintegration disablewebsecurity></webview>
+        <div class="indicator"></div>
+    </div>
+    <script>
+        var remote = require('remote');
+        var BrowserWindow = remote.require('browser-window');
+
+        onload = function () {
+            var webview = document.getElementById("view");
+            var indicator = document.querySelector(".indicator");
+
+            var loadstart = function () {
+                indicator.innerText = "loading...";
+            }
+            var loadstop = function () {
+                indicator.innerText = "";
+            }
+            webview.addEventListener("did-start-loading", loadstart);
+            webview.addEventListener("did-stop-loading", loadstop);
+            webview.addEventListener('did-get-response-details', function (e) {
+                console.log(e.newUrl);
+            });
+            webview.addEventListener('did-fail-load', function (e) {
+                console.log(' did-fail-load:  ' + e.errorDescription);
+            });
+            webview.addEventListener('dom-ready', function () {
+                console.log('page ready');
+                webview.send('ping');
+            });
+            webview.addEventListener('page-title-set', function (e) {
+                console.log('Page Title: ' + e.title);
+            });
+            webview.addEventListener('console-message', function (e) {
+                console.log('Guest page logged a message:', e.message + ' line: ' + e.line);
+            });
+
+            // In embedder page.
+            webview.addEventListener('ipc-message', function (event) {
+                console.log('pong <----------<<  ' + event.channel);
+                // Prints "pong"
+            });
+            webview.addEventListener('new-window', function (e) {
+                require('shell').openExternal(e.url);
+            });
+            setTimeout(function () { webview.send('ping', 'my message'); }, 5000);
+        }
+    </script>
+</body>
+</html>
